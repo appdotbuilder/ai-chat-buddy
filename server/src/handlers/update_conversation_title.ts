@@ -1,15 +1,29 @@
 
+import { db } from '../db';
+import { conversationsTable } from '../db/schema';
 import { type UpdateConversationTitleInput, type Conversation } from '../schema';
+import { eq } from 'drizzle-orm';
 
-export async function updateConversationTitle(input: UpdateConversationTitleInput): Promise<Conversation> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is updating the title of an existing conversation.
-    // Should validate that the conversation exists and belongs to the requesting user.
-    return Promise.resolve({
-        id: input.conversation_id,
-        user_id: 0, // Should be fetched from DB
+export const updateConversationTitle = async (input: UpdateConversationTitleInput): Promise<Conversation> => {
+  try {
+    // Update conversation title and updated_at timestamp
+    const result = await db.update(conversationsTable)
+      .set({
         title: input.title,
-        created_at: new Date(), // Should be fetched from DB
         updated_at: new Date()
-    } as Conversation);
-}
+      })
+      .where(eq(conversationsTable.id, input.conversation_id))
+      .returning()
+      .execute();
+
+    // Check if conversation exists
+    if (result.length === 0) {
+      throw new Error(`Conversation with id ${input.conversation_id} not found`);
+    }
+
+    return result[0];
+  } catch (error) {
+    console.error('Conversation title update failed:', error);
+    throw error;
+  }
+};
